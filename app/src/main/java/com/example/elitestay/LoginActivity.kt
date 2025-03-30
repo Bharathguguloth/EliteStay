@@ -2,6 +2,7 @@ package com.example.elitestay
 
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -17,25 +18,29 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.elitestay.ui.theme.EliteStayTheme
+import com.google.firebase.auth.FirebaseAuth
 
 class LoginActivity : ComponentActivity() {
+
+    private lateinit var auth: FirebaseAuth
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        auth = FirebaseAuth.getInstance()
+
         setContent {
             EliteStayTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    LoginScreen()
+                    LoginScreen(auth = auth)
                 }
             }
         }
@@ -43,9 +48,11 @@ class LoginActivity : ComponentActivity() {
 }
 
 @Composable
-fun LoginScreen() {
+fun LoginScreen(auth: FirebaseAuth) {
+    val context = LocalContext.current
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var loading by remember { mutableStateOf(false) }
 
     Box(
         modifier = Modifier
@@ -66,7 +73,6 @@ fun LoginScreen() {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // Logo above the box
             Image(
                 painter = painterResource(id = R.drawable.elitestay_logo),
                 contentDescription = "EliteStay Logo",
@@ -75,7 +81,6 @@ fun LoginScreen() {
                     .padding(bottom = 24.dp)
             )
 
-            // Login box
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -114,15 +119,32 @@ fun LoginScreen() {
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                val context = LocalContext.current
-
                 Button(
                     onClick = {
-                        context.startActivity(Intent(context, HomeActivity::class.java))
+                        if (email.isNotBlank() && password.isNotBlank()) {
+                            loading = true
+                            auth.signInWithEmailAndPassword(email, password)
+                                .addOnCompleteListener { task ->
+                                    loading = false
+                                    if (task.isSuccessful) {
+                                        Toast.makeText(context, "Login Successful", Toast.LENGTH_SHORT).show()
+                                        context.startActivity(Intent(context, HomeActivity::class.java))
+                                    } else {
+                                        Toast.makeText(context, "Login Failed: ${task.exception?.message}", Toast.LENGTH_LONG).show()
+                                    }
+                                }
+                        } else {
+                            Toast.makeText(context, "Please fill in all fields", Toast.LENGTH_SHORT).show()
+                        }
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("Login")
+                }
+
+                if (loading) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    CircularProgressIndicator()
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
@@ -138,7 +160,6 @@ fun LoginScreen() {
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-
                 Row {
                     Text(text = "Don’t have an account? ")
                     Text(
@@ -146,7 +167,6 @@ fun LoginScreen() {
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.clickable {
-
                             context.startActivity(Intent(context, RegisterActivity::class.java))
                         }
                     )
@@ -155,6 +175,3 @@ fun LoginScreen() {
         }
     }
 }
-
-
-
