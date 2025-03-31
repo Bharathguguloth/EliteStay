@@ -1,5 +1,6 @@
 package com.example.elitestay
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -16,12 +17,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.*
-import com.example.elitestay.navigation.BottomNavItem
 import com.example.elitestay.ui.theme.EliteStayTheme
+import com.google.firebase.auth.FirebaseAuth
 
 class HomeActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -34,14 +37,19 @@ class HomeActivity : ComponentActivity() {
     }
 }
 
+sealed class BottomNavItem(val route: String, val label: String, val icon: ImageVector) {
+    object Home : BottomNavItem("home", "Home", Icons.Default.Home)
+    object Shortlist : BottomNavItem("shortlist", "Shortlist", Icons.Default.Favorite)
+    object Profile : BottomNavItem("profile", "Profile", Icons.Default.Person)
+}
+
 @Composable
 fun HomeActivityContent() {
     val navController = rememberNavController()
     val bottomNavItems = listOf(
         BottomNavItem.Home,
         BottomNavItem.Shortlist,
-        BottomNavItem.Chat,
-        BottomNavItem.Profile
+        BottomNavItem.Profile //  Chat removed
     )
 
     Scaffold(
@@ -56,8 +64,14 @@ fun HomeActivityContent() {
         ) {
             composable(BottomNavItem.Home.route) { HomeScreen() }
             composable(BottomNavItem.Shortlist.route) { ShortlistScreen() }
-            composable(BottomNavItem.Chat.route) { ChatScreen() }
-            composable(BottomNavItem.Profile.route) { ProfileScreen() }
+            composable(BottomNavItem.Profile.route) {
+                ProfileScreen(
+                    onLogout = {
+                        FirebaseAuth.getInstance().signOut()
+                        navController.context.startActivity(Intent(navController.context, LoginActivity::class.java))
+                    }
+                )
+            }
         }
     }
 }
@@ -83,7 +97,7 @@ fun BottomNavigationBar(
                         }
                     }
                 },
-                icon = { Icon(item.icon, contentDescription = null) },
+                icon = { Icon(item.icon, contentDescription = item.label) },
                 label = { Text(item.label) }
             )
         }
@@ -107,7 +121,6 @@ fun HomeScreen() {
             )
             .padding(16.dp)
     ) {
-        // Top Search Row
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -130,7 +143,6 @@ fun HomeScreen() {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Search Bar
         OutlinedTextField(
             value = searchQuery,
             onValueChange = { searchQuery = it },
@@ -146,7 +158,6 @@ fun HomeScreen() {
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Continue Journey
         Text(
             text = "Continue Your Search Journey",
             fontSize = 18.sp,
@@ -239,25 +250,82 @@ fun FilterButton(text: String, selected: Boolean = false) {
 
 @Composable
 fun ShortlistScreen() {
-    CenteredText("Shortlisted Properties")
-}
+    val properties = listOf(
+        "Elite Villa, Goa",
+        "Luxury Studio, Bangalore",
+        "Ocean View Apartment, Mumbai"
+    )
 
-@Composable
-fun ChatScreen() {
-    CenteredText("Chat with Hosts")
-}
-
-@Composable
-fun ProfileScreen() {
-    CenteredText("Your Profile Info")
-}
-
-@Composable
-fun CenteredText(text: String) {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text(text = text, fontSize = 20.sp)
+        Text("Shortlisted Properties", style = MaterialTheme.typography.headlineSmall)
+
+        properties.forEach { property ->
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(property, fontSize = 16.sp)
+                    Text("View", color = MaterialTheme.colorScheme.primary)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ProfileScreen(
+    fullName: String = "Bharat",
+    email: String = "bharat12@gmail.com",
+    onLogout: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text("My Profile", style = MaterialTheme.typography.headlineSmall)
+
+        ProfileItem("Full Name", fullName)
+        ProfileItem("Email", email)
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Button(
+            onClick = onLogout,
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+        ) {
+            Text("Logout", color = MaterialTheme.colorScheme.onError)
+        }
+    }
+}
+
+@Composable
+fun ProfileItem(label: String, value: String) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(label, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+            Text(value, fontSize = 16.sp)
+        }
     }
 }

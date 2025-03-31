@@ -2,6 +2,7 @@ package com.example.elitestay
 
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -23,6 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.elitestay.ui.theme.EliteStayTheme
+import com.google.firebase.auth.FirebaseAuth
 
 class RegisterActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -47,6 +49,9 @@ fun RegisterScreen() {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
 
+    val context = LocalContext.current
+    val auth = FirebaseAuth.getInstance()
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -66,7 +71,7 @@ fun RegisterScreen() {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // Logo above box
+            // Logo
             Image(
                 painter = painterResource(id = R.drawable.elitestay_logo),
                 contentDescription = "EliteStay Logo",
@@ -75,7 +80,7 @@ fun RegisterScreen() {
                     .padding(bottom = 24.dp)
             )
 
-            // White box
+            // Registration Form
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -107,6 +112,7 @@ fun RegisterScreen() {
                     value = email,
                     onValueChange = { email = it },
                     label = { Text("Email") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                     modifier = Modifier.fillMaxWidth()
                 )
 
@@ -124,15 +130,27 @@ fun RegisterScreen() {
                 Spacer(modifier = Modifier.height(20.dp))
 
                 Button(
-                    onClick = { /* Handle registration logic */ },
+                    onClick = {
+                        if (email.isNotBlank() && password.length >= 6) {
+                            auth.createUserWithEmailAndPassword(email, password)
+                                .addOnCompleteListener { task ->
+                                    if (task.isSuccessful) {
+                                        Toast.makeText(context, "Registration successful!", Toast.LENGTH_SHORT).show()
+                                        context.startActivity(Intent(context, LoginActivity::class.java))
+                                    } else {
+                                        Toast.makeText(context, "Error: ${task.exception?.message}", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                        } else {
+                            Toast.makeText(context, "Enter valid email & password (min 6 chars)", Toast.LENGTH_SHORT).show()
+                        }
+                    },
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("Register")
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
-
-                val context = LocalContext.current
 
                 Row {
                     Text(text = "Already have an account? ")
