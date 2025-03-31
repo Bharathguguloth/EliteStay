@@ -14,7 +14,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -37,6 +36,15 @@ class HomeActivity : ComponentActivity() {
     }
 }
 
+// ✅ Composable-safe way to define background gradient
+@Composable
+fun AppBackgroundBrush(): Brush = Brush.verticalGradient(
+    colors = listOf(
+        MaterialTheme.colorScheme.primary,
+        MaterialTheme.colorScheme.secondary
+    )
+)
+
 sealed class BottomNavItem(val route: String, val label: String, val icon: ImageVector) {
     object Home : BottomNavItem("home", "Home", Icons.Default.Home)
     object Shortlist : BottomNavItem("shortlist", "Shortlist", Icons.Default.Favorite)
@@ -49,7 +57,7 @@ fun HomeActivityContent() {
     val bottomNavItems = listOf(
         BottomNavItem.Home,
         BottomNavItem.Shortlist,
-        BottomNavItem.Profile //  Chat removed
+        BottomNavItem.Profile
     )
 
     Scaffold(
@@ -106,19 +114,13 @@ fun BottomNavigationBar(
 
 @Composable
 fun HomeScreen() {
+    val background = AppBackgroundBrush()
     var searchQuery by remember { mutableStateOf("") }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    listOf(
-                        MaterialTheme.colorScheme.primary,
-                        MaterialTheme.colorScheme.secondary
-                    )
-                )
-            )
+            .background(background)
             .padding(16.dp)
     ) {
         Row(
@@ -126,12 +128,7 @@ fun HomeScreen() {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "EliteStay",
-                fontSize = 24.sp,
-                color = Color.White
-            )
-
+            Text("EliteStay", fontSize = 24.sp, color = Color.White)
             Button(
                 onClick = { /* Refer action */ },
                 shape = RoundedCornerShape(50),
@@ -147,9 +144,7 @@ fun HomeScreen() {
             value = searchQuery,
             onValueChange = { searchQuery = it },
             placeholder = { Text("Search by City, University or Property") },
-            leadingIcon = {
-                Icon(Icons.Default.Search, contentDescription = null)
-            },
+            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
             shape = RoundedCornerShape(30.dp),
             modifier = Modifier
                 .fillMaxWidth()
@@ -158,12 +153,7 @@ fun HomeScreen() {
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        Text(
-            text = "Continue Your Search Journey",
-            fontSize = 18.sp,
-            color = Color.White
-        )
-
+        Text("Continue Your Search Journey", fontSize = 18.sp, color = Color.White)
         Spacer(modifier = Modifier.height(8.dp))
 
         Row(
@@ -175,12 +165,7 @@ fun HomeScreen() {
         }
 
         Spacer(modifier = Modifier.height(24.dp))
-
-        Text(
-            text = "Continue Where You Left From",
-            fontSize = 18.sp,
-            color = Color.White
-        )
+        Text("Continue Where You Left From", fontSize = 18.sp, color = Color.White)
 
         Spacer(modifier = Modifier.height(12.dp))
 
@@ -240,8 +225,7 @@ fun FilterButton(text: String, selected: Boolean = false) {
     ) {
         Box(
             contentAlignment = Alignment.Center,
-            modifier = Modifier
-                .padding(horizontal = 16.dp, vertical = 8.dp)
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
             Text(text, color = textColor, fontSize = 14.sp)
         }
@@ -250,33 +234,36 @@ fun FilterButton(text: String, selected: Boolean = false) {
 
 @Composable
 fun ShortlistScreen() {
+    val background = AppBackgroundBrush()
     val properties = listOf(
         "Elite Villa, Goa",
         "Luxury Studio, Bangalore",
         "Ocean View Apartment, Mumbai"
     )
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+            .background(background)
+            .padding(24.dp)
     ) {
-        Text("Shortlisted Properties", style = MaterialTheme.typography.headlineSmall)
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text("Shortlisted Properties", style = MaterialTheme.typography.headlineSmall, color = Color.White)
 
-        properties.forEach { property ->
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-            ) {
-                Row(
-                    modifier = Modifier
-                        .padding(16.dp)
-                        .fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
+            properties.forEach { property ->
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                 ) {
-                    Text(property, fontSize = 16.sp)
-                    Text("View", color = MaterialTheme.colorScheme.primary)
+                    Row(
+                        modifier = Modifier
+                            .padding(16.dp)
+                            .fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(property, fontSize = 16.sp)
+                        Text("View", color = MaterialTheme.colorScheme.primary)
+                    }
                 }
             }
         }
@@ -289,25 +276,30 @@ fun ProfileScreen(
     email: String = "bharat12@gmail.com",
     onLogout: () -> Unit
 ) {
-    Column(
+    val background = AppBackgroundBrush()
+
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .background(background)
+            .padding(24.dp)
     ) {
-        Text("My Profile", style = MaterialTheme.typography.headlineSmall)
-
-        ProfileItem("Full Name", fullName)
-        ProfileItem("Email", email)
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Button(
-            onClick = onLogout,
-            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+        Column(
+            verticalArrangement = Arrangement.spacedBy(20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text("Logout", color = MaterialTheme.colorScheme.onError)
+            Text("My Profile", style = MaterialTheme.typography.headlineSmall, color = Color.White)
+            ProfileItem("Full Name", fullName)
+            ProfileItem("Email", email)
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Button(
+                onClick = onLogout,
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+            ) {
+                Text("Logout", color = MaterialTheme.colorScheme.onError)
+            }
         }
     }
 }
