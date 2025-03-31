@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -24,6 +25,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.*
 import com.example.elitestay.ui.theme.EliteStayTheme
 import com.google.firebase.auth.FirebaseAuth
+import kotlinx.coroutines.delay
 
 class HomeActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -54,11 +56,21 @@ sealed class BottomNavItem(val route: String, val label: String, val icon: Image
 @Composable
 fun HomeActivityContent() {
     val navController = rememberNavController()
+    val context = LocalContext.current
     val bottomNavItems = listOf(
         BottomNavItem.Home,
         BottomNavItem.Shortlist,
         BottomNavItem.Profile
     )
+
+    // 🔒 Auto logout if inactive for 2 minutes
+    AutoLogoutHandler {
+        FirebaseAuth.getInstance().signOut()
+        context.startActivity(
+            Intent(context, LoginActivity::class.java)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+        )
+    }
 
     Scaffold(
         bottomBar = {
@@ -76,13 +88,40 @@ fun HomeActivityContent() {
                 ProfileScreen(
                     onLogout = {
                         FirebaseAuth.getInstance().signOut()
-                        navController.context.startActivity(Intent(navController.context, LoginActivity::class.java))
+                        navController.context.startActivity(
+                            Intent(navController.context, LoginActivity::class.java)
+                        )
                     }
                 )
             }
         }
     }
 }
+
+
+@Composable
+fun AutoLogoutHandler(timeoutMillis: Long = 2 * 60 * 1000L, onTimeout: () -> Unit) {
+    var lastInteractionTime by remember { mutableStateOf(System.currentTimeMillis()) }
+    val scope = rememberCoroutineScope()
+
+    // Check inactivity every second
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(1000)
+            val now = System.currentTimeMillis()
+            if (now - lastInteractionTime > timeoutMillis) {
+                onTimeout()
+                break
+            }
+        }
+    }
+
+    // Update on UI changes (recomposition)
+    SideEffect {
+        lastInteractionTime = System.currentTimeMillis()
+    }
+}
+
 
 @Composable
 fun BottomNavigationBar(
