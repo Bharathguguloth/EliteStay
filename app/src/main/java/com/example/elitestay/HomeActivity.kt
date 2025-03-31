@@ -277,6 +277,8 @@ fun ProfileScreen(
     onLogout: () -> Unit
 ) {
     val background = AppBackgroundBrush()
+    var notificationsEnabled by remember { mutableStateOf(true) }
+    var darkModeEnabled by remember { mutableStateOf(false) }
 
     Box(
         modifier = Modifier
@@ -289,8 +291,27 @@ fun ProfileScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text("My Profile", style = MaterialTheme.typography.headlineSmall, color = Color.White)
+
+            // Profile Info
             ProfileItem("Full Name", fullName)
             ProfileItem("Email", email)
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Settings Section
+            Text("Settings", style = MaterialTheme.typography.titleMedium, color = Color.White)
+
+            SettingsToggleItem("Notifications", notificationsEnabled) {
+                notificationsEnabled = it
+            }
+
+            SettingsToggleItem("Dark Mode", darkModeEnabled) {
+                darkModeEnabled = it
+            }
+
+            SettingsClickableItem("Language", value = "English") {
+                // TODO: Add language selection logic
+            }
 
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -303,6 +324,7 @@ fun ProfileScreen(
         }
     }
 }
+
 
 @Composable
 fun ProfileItem(label: String, value: String) {
@@ -321,3 +343,44 @@ fun ProfileItem(label: String, value: String) {
         }
     }
 }
+
+@Composable
+fun SettingsToggleItem(label: String, checked: Boolean, onToggle: (Boolean) -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(horizontal = 16.dp, vertical = 12.dp)
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(label, fontSize = 16.sp)
+            Switch(checked = checked, onCheckedChange = onToggle)
+        }
+    }
+}
+
+@Composable
+fun SettingsClickableItem(label: String, value: String, onClick: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(horizontal = 16.dp, vertical = 12.dp)
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(label, fontSize = 16.sp)
+            Text(value, fontSize = 16.sp, color = MaterialTheme.colorScheme.primary)
+        }
+    }
+}
+
