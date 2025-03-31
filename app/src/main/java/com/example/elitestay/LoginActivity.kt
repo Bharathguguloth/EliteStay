@@ -54,7 +54,36 @@ fun LoginScreen(auth: FirebaseAuth) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var loading by remember { mutableStateOf(false) }
+    var showGDPR by remember { mutableStateOf(true) }
 
+    // 🔐 GDPR Consent Dialog
+    if (showGDPR) {
+        AlertDialog(
+            onDismissRequest = {},
+            title = { Text("GDPR Consent") },
+            text = {
+                Text(
+                    "We use cookies and collect limited data to improve your experience. " +
+                            "By continuing, you agree to our Privacy Policy."
+                )
+            },
+            confirmButton = {
+                Button(onClick = { showGDPR = false }) {
+                    Text("I Agree")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showGDPR = false
+                    Toast.makeText(context, "You can manage preferences in Settings.", Toast.LENGTH_LONG).show()
+                }) {
+                    Text("Manage Preferences")
+                }
+            }
+        )
+    }
+
+    // ⬇️ Login UI
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -131,14 +160,19 @@ fun LoginScreen(auth: FirebaseAuth) {
                                         Toast.makeText(context, "Login Successful", Toast.LENGTH_SHORT).show()
                                         context.startActivity(Intent(context, HomeActivity::class.java))
                                     } else {
-                                        Toast.makeText(context, "Login Failed: ${task.exception?.message}", Toast.LENGTH_LONG).show()
+                                        Toast.makeText(
+                                            context,
+                                            "Login Failed: ${task.exception?.message}",
+                                            Toast.LENGTH_LONG
+                                        ).show()
                                     }
                                 }
                         } else {
                             Toast.makeText(context, "Please fill in all fields", Toast.LENGTH_SHORT).show()
                         }
                     },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !loading
                 ) {
                     Text("Login")
                 }
@@ -154,7 +188,7 @@ fun LoginScreen(auth: FirebaseAuth) {
                     text = "Forgot Password?",
                     modifier = Modifier
                         .align(Alignment.End)
-                        .clickable { /* Handle forgot password */ },
+                        .clickable { /* TODO: Handle forgot password */ },
                     color = MaterialTheme.colorScheme.secondary,
                     fontSize = 14.sp
                 )
