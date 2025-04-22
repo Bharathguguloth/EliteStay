@@ -1,8 +1,10 @@
 package com.example.elitestay.model
 
 data class Property(
-    val name: String,
-    val location: String, // could also be LatLng
-    val price: String,
-    val imageUrl: String // optional for now
+    val id: String = "",
+    val name: String = "",
+    val location: String = "",
+    val price: String = "",
+    val imageUrl: String = ""
 )
+

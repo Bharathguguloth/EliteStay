@@ -41,7 +41,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.resumeWithException
-
+import com.example.elitestay.PropertyDetailsScreen
+import com.google.firebase.firestore.FirebaseFirestore
 
 
 class HomeActivity : ComponentActivity() {
@@ -114,6 +115,11 @@ fun HomeActivityContent() {
                     }
                 )
             }
+            composable("details/{propertyId}") { backStackEntry ->
+                val propertyId = backStackEntry.arguments?.getString("propertyId") ?: ""
+                PropertyDetailsScreen(propertyId)
+            }
+
         }
     }
 }
@@ -166,8 +172,10 @@ fun BottomNavigationBar(
     }
 }
 
+
+
 @Composable
-fun HomeScreen() {
+fun HomeScreen(navController: NavHostController = rememberNavController()) {
     val background = AppBackgroundBrush()
     val context = LocalContext.current
     val placesClient: PlacesClient = remember { Places.createClient(context) }
@@ -177,12 +185,15 @@ fun HomeScreen() {
     var selectedPlaceDetails by remember { mutableStateOf<Pair<String, String>?>(null) }
     var firestoreProperties by remember { mutableStateOf<List<Property>>(emptyList()) }
 
-    // 🔹 Fetch properties from Firestore
+    // Fetch properties from Firestore
     LaunchedEffect(Unit) {
         val db = Firebase.firestore
         val snapshot = db.collection("properties").get().await()
         firestoreProperties = snapshot.documents.mapNotNull { it.toObject(Property::class.java) }
     }
+
+
+
 
     // 🔹 Google Autocomplete
     LaunchedEffect(searchQuery) {
@@ -296,14 +307,17 @@ fun HomeScreen() {
                             Text(property.price, color = MaterialTheme.colorScheme.primary)
                             Text("Location: ${property.location}", style = MaterialTheme.typography.bodySmall)
                             Spacer(modifier = Modifier.height(8.dp))
+                            val navController = rememberNavController() // or pass it down properly
+
                             Button(
                                 onClick = {
-                                    // You can navigate to details or booking screen
+                                    navController.navigate("details/${property.id}")
                                 },
                                 modifier = Modifier.align(Alignment.End)
                             ) {
-                                Text("Book Now")
+                                Text("View Details")
                             }
+
                         }
                     }
                 }
@@ -311,6 +325,7 @@ fun HomeScreen() {
         }
     }
 }
+
 
 
 
