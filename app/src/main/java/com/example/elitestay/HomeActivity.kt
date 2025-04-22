@@ -38,7 +38,7 @@ class HomeActivity : ComponentActivity() {
     }
 }
 
-// ✅ Composable-safe way to define background gradient
+// Composable-safe way to define background gradient
 @Composable
 fun AppBackgroundBrush(): Brush = Brush.verticalGradient(
     colors = listOf(
@@ -162,23 +162,6 @@ fun HomeScreen() {
             .background(background)
             .padding(16.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text("EliteStay", fontSize = 24.sp, color = Color.White)
-            Button(
-                onClick = { /* Refer action */ },
-                shape = RoundedCornerShape(50),
-                colors = ButtonDefaults.buttonColors(containerColor = Color.White)
-            ) {
-                Text("Refer & Earn", color = MaterialTheme.colorScheme.primary)
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
         OutlinedTextField(
             value = searchQuery,
             onValueChange = { searchQuery = it },
@@ -189,87 +172,11 @@ fun HomeScreen() {
                 .fillMaxWidth()
                 .background(Color.White, shape = RoundedCornerShape(30.dp))
         )
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Text("Continue Your Search Journey", fontSize = 18.sp, color = Color.White)
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Chip(label = "Middlesbrough")
-            Chip(label = "Teesside University")
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-        Text("Continue Where You Left From", fontSize = 18.sp, color = Color.White)
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            FilterButton("Recently Viewed", selected = true)
-            FilterButton("Shortlisted")
-            FilterButton("Enquired")
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(120.dp),
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("SOLD OUT - Property Preview")
-            }
-        }
     }
 }
 
-@Composable
-fun Chip(label: String) {
-    Surface(
-        shape = RoundedCornerShape(50),
-        color = Color.White.copy(alpha = 0.2f),
-        modifier = Modifier
-            .height(36.dp)
-            .clickable { }
-            .padding(horizontal = 8.dp),
-        tonalElevation = 2.dp
-    ) {
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier.padding(horizontal = 16.dp)
-        ) {
-            Text(label, color = Color.White)
-        }
-    }
-}
 
-@Composable
-fun FilterButton(text: String, selected: Boolean = false) {
-    val backgroundColor = if (selected) MaterialTheme.colorScheme.background else Color.White.copy(alpha = 0.6f)
-    val textColor = if (selected) MaterialTheme.colorScheme.primary else Color.DarkGray
 
-    Surface(
-        shape = RoundedCornerShape(50),
-        color = backgroundColor,
-        shadowElevation = 4.dp
-    ) {
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-        ) {
-            Text(text, color = textColor, fontSize = 14.sp)
-        }
-    }
-}
 
 @Composable
 fun ShortlistScreen() {
