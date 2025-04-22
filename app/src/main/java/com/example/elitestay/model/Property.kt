@@ -8,3 +8,4 @@ data class Property(
     val imageUrl: String = ""
 )
 
+

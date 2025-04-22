@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.*
+import androidx.navigation.navArgument
 import coil.compose.AsyncImage
 import com.example.elitestay.model.Property
 import com.example.elitestay.ui.theme.EliteStayTheme
@@ -43,6 +44,7 @@ import kotlinx.coroutines.withContext
 import kotlin.coroutines.resumeWithException
 import com.example.elitestay.PropertyDetailsScreen
 import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 
 
 class HomeActivity : ComponentActivity() {
@@ -103,7 +105,7 @@ fun HomeActivityContent() {
             startDestination = BottomNavItem.Home.route,
             modifier = Modifier.padding(innerPadding)
         ) {
-            composable(BottomNavItem.Home.route) { HomeScreen() }
+            composable(BottomNavItem.Home.route) { HomeScreen(navController) }
             composable(BottomNavItem.Shortlist.route) { ShortlistScreen() }
             composable(BottomNavItem.Profile.route) {
                 ProfileScreen(
@@ -115,10 +117,16 @@ fun HomeActivityContent() {
                     }
                 )
             }
-            composable("details/{propertyId}") { backStackEntry ->
+            composable(
+                route = "property_details/{propertyId}",
+                arguments = listOf(
+                    navArgument("propertyId") { defaultValue = "" }
+                )
+            ) { backStackEntry ->
                 val propertyId = backStackEntry.arguments?.getString("propertyId") ?: ""
-                PropertyDetailsScreen(propertyId)
+                PropertyDetailsScreen(propertyId = propertyId)
             }
+
 
         }
     }
@@ -175,7 +183,7 @@ fun BottomNavigationBar(
 
 
 @Composable
-fun HomeScreen(navController: NavHostController = rememberNavController()) {
+fun HomeScreen(navController: NavHostController) {
     val background = AppBackgroundBrush()
     val context = LocalContext.current
     val placesClient: PlacesClient = remember { Places.createClient(context) }
@@ -183,19 +191,20 @@ fun HomeScreen(navController: NavHostController = rememberNavController()) {
     var searchQuery by remember { mutableStateOf("") }
     var suggestions by remember { mutableStateOf(listOf<AutocompletePrediction>()) }
     var selectedPlaceDetails by remember { mutableStateOf<Pair<String, String>?>(null) }
-    var firestoreProperties by remember { mutableStateOf<List<Property>>(emptyList()) }
 
-    // Fetch properties from Firestore
+    val firestoreProperties = remember { mutableStateMapOf<String, Property>() }
+
     LaunchedEffect(Unit) {
         val db = Firebase.firestore
         val snapshot = db.collection("properties").get().await()
-        firestoreProperties = snapshot.documents.mapNotNull { it.toObject(Property::class.java) }
+        snapshot.documents.forEach { doc ->
+            val prop = doc.toObject(Property::class.java)
+            if (prop != null) {
+                firestoreProperties[doc.id] = prop
+            }
+        }
     }
 
-
-
-
-    // 🔹 Google Autocomplete
     LaunchedEffect(searchQuery) {
         if (searchQuery.length > 2) {
             val request = FindAutocompletePredictionsRequest.builder()
@@ -234,7 +243,6 @@ fun HomeScreen(navController: NavHostController = rememberNavController()) {
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // 🔹 Suggestions
         suggestions.forEach { prediction ->
             Card(
                 modifier = Modifier
@@ -264,11 +272,10 @@ fun HomeScreen(navController: NavHostController = rememberNavController()) {
             }
         }
 
-        // 🔹 Matched Firestore properties
         selectedPlaceDetails?.let { (placeName, _) ->
             Spacer(modifier = Modifier.height(16.dp))
 
-            val matchedProperties = firestoreProperties.filter {
+            val matched = firestoreProperties.filterValues {
                 it.location.contains(placeName, ignoreCase = true)
             }
 
@@ -279,14 +286,10 @@ fun HomeScreen(navController: NavHostController = rememberNavController()) {
                 color = Color.White
             )
 
-            if (matchedProperties.isEmpty()) {
-                Text(
-                    "No properties found in this location",
-                    color = Color.LightGray,
-                    modifier = Modifier.padding(top = 8.dp)
-                )
+            if (matched.isEmpty()) {
+                Text("No properties found in this location", color = Color.LightGray)
             } else {
-                matchedProperties.forEach { property ->
+                matched.forEach { (id, property) ->
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -307,17 +310,14 @@ fun HomeScreen(navController: NavHostController = rememberNavController()) {
                             Text(property.price, color = MaterialTheme.colorScheme.primary)
                             Text("Location: ${property.location}", style = MaterialTheme.typography.bodySmall)
                             Spacer(modifier = Modifier.height(8.dp))
-                            val navController = rememberNavController() // or pass it down properly
-
                             Button(
                                 onClick = {
-                                    navController.navigate("details/${property.id}")
+                                    navController.navigate("property_details/$id")
                                 },
                                 modifier = Modifier.align(Alignment.End)
                             ) {
                                 Text("View Details")
                             }
-
                         }
                     }
                 }
@@ -331,6 +331,7 @@ fun HomeScreen(navController: NavHostController = rememberNavController()) {
 
 
 
+@OptIn(ExperimentalCoroutinesApi::class)
 suspend fun <T> com.google.android.gms.tasks.Task<T>.await(): T =
     kotlinx.coroutines.suspendCancellableCoroutine { cont ->
         addOnCompleteListener {
