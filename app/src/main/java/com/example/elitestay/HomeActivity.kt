@@ -23,9 +23,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.*
+import com.example.elitestay.model.Property
 import com.example.elitestay.ui.theme.EliteStayTheme
 import com.google.android.libraries.places.api.Places
 import com.google.android.libraries.places.api.model.AutocompletePrediction
+
+import com.google.android.libraries.places.api.model.Place
+import com.google.android.libraries.places.api.net.FetchPlaceRequest
 import com.google.android.libraries.places.api.net.FindAutocompletePredictionsRequest
 import com.google.android.libraries.places.api.net.PlacesClient
 import com.google.firebase.auth.FirebaseAuth
@@ -34,6 +38,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.resumeWithException
+
+
 
 class HomeActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -158,16 +164,39 @@ fun BottomNavigationBar(
 }
 
 @Composable
-fun HomeScreen(viewModel: SearchViewModel = androidx.lifecycle.viewmodel.compose.viewModel()) {
+fun HomeScreen() {
     val background = AppBackgroundBrush()
     val context = LocalContext.current
-    var searchQuery by remember { mutableStateOf("") }
-    var suggestions by remember { mutableStateOf(listOf<String>()) }
+    val placesClient: PlacesClient = remember { Places.createClient(context) }
 
-    // Fetch on text change
+    var searchQuery by remember { mutableStateOf("") }
+    var suggestions by remember { mutableStateOf(listOf<AutocompletePrediction>()) }
+    var selectedPlaceDetails by remember { mutableStateOf<Pair<String, String>?>(null) }
+
+    // Mock property list
+    val mockProperties = listOf(
+        Property("Cozy Apartment", "Mumbai", "₹18,000/mo", ""),
+        Property("Elite PG for Girls", "Pune", "₹12,500/mo", ""),
+        Property("Luxury Villa", "Goa", "₹35,000/mo", ""),
+        Property("Budget Stay", "Delhi", "₹8,500/mo", ""),
+        Property("University Hostel", "Bangalore", "₹15,000/mo", "")
+    )
+
+    // Autocomplete logic
     LaunchedEffect(searchQuery) {
         if (searchQuery.length > 2) {
-            suggestions = viewModel.getSuggestions(searchQuery)
+            val request = FindAutocompletePredictionsRequest.builder()
+                .setQuery(searchQuery)
+                .build()
+
+            try {
+                val response = withContext(Dispatchers.IO) {
+                    placesClient.findAutocompletePredictions(request).await()
+                }
+                suggestions = response.autocompletePredictions
+            } catch (e: Exception) {
+                suggestions = emptyList()
+            }
         } else {
             suggestions = emptyList()
         }
@@ -192,25 +221,77 @@ fun HomeScreen(viewModel: SearchViewModel = androidx.lifecycle.viewmodel.compose
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        suggestions.forEach { suggestion ->
+        // 🔹 Suggestions
+        suggestions.forEach { prediction ->
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 4.dp)
                     .clickable {
-                        searchQuery = suggestion
+                        searchQuery = prediction.getFullText(null).toString()
                         suggestions = emptyList()
+
+                        val placeId = prediction.placeId
+                        val placeFields = listOf(Place.Field.NAME, Place.Field.LAT_LNG)
+                        val request = FetchPlaceRequest.builder(placeId, placeFields).build()
+
+                        placesClient.fetchPlace(request).addOnSuccessListener { response ->
+                            val place = response.place
+                            val name = place.name ?: ""
+                            val location = place.latLng?.toString() ?: ""
+                            selectedPlaceDetails = name to location
+                        }
                     }
             ) {
                 Text(
-                    text = suggestion,
+                    text = prediction.getFullText(null).toString(),
                     modifier = Modifier.padding(16.dp),
                     fontSize = 14.sp
                 )
             }
         }
+
+        // 🔹 Matched properties
+        selectedPlaceDetails?.let { (placeName, coordinates) ->
+            Spacer(modifier = Modifier.height(16.dp))
+
+            val matchedProperties = mockProperties.filter {
+                placeName.contains(it.location, ignoreCase = true)
+            }
+
+            Text(
+                "Properties in $placeName",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = Color.White
+            )
+
+            if (matchedProperties.isEmpty()) {
+                Text(
+                    "No properties found in this location",
+                    color = Color.LightGray,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+            } else {
+                matchedProperties.forEach { property ->
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 6.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(property.name, fontWeight = FontWeight.SemiBold, fontSize = 18.sp)
+                            Text(property.price, color = MaterialTheme.colorScheme.primary)
+                            Text("Location: ${property.location}", style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                }
+            }
+        }
     }
 }
+
+
 
 
 suspend fun <T> com.google.android.gms.tasks.Task<T>.await(): T =
