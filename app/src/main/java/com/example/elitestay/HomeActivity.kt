@@ -24,12 +24,25 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.*
 import com.example.elitestay.ui.theme.EliteStayTheme
+import com.google.android.libraries.places.api.Places
+import com.google.android.libraries.places.api.model.AutocompletePrediction
+import com.google.android.libraries.places.api.net.FindAutocompletePredictionsRequest
+import com.google.android.libraries.places.api.net.PlacesClient
 import com.google.firebase.auth.FirebaseAuth
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
+import kotlin.coroutines.resumeWithException
 
 class HomeActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        if (!Places.isInitialized()) {
+            Places.initialize(applicationContext, "AIzaSyAnqrHnw_ULXIDLRjWaEacqd1uGHw2a8JI")
+        }
+
         setContent {
             EliteStayTheme {
                 HomeActivityContent()
@@ -38,7 +51,6 @@ class HomeActivity : ComponentActivity() {
     }
 }
 
-// Composable-safe way to define background gradient
 @Composable
 fun AppBackgroundBrush(): Brush = Brush.verticalGradient(
     colors = listOf(
@@ -63,7 +75,6 @@ fun HomeActivityContent() {
         BottomNavItem.Profile
     )
 
-    // 🔒 Auto logout if inactive for 2 minutes
     AutoLogoutHandler {
         FirebaseAuth.getInstance().signOut()
         context.startActivity(
@@ -98,13 +109,10 @@ fun HomeActivityContent() {
     }
 }
 
-
 @Composable
 fun AutoLogoutHandler(timeoutMillis: Long = 2 * 60 * 1000L, onTimeout: () -> Unit) {
     var lastInteractionTime by remember { mutableStateOf(System.currentTimeMillis()) }
-    val scope = rememberCoroutineScope()
 
-    // Check inactivity every second
     LaunchedEffect(Unit) {
         while (true) {
             delay(1000)
@@ -116,12 +124,10 @@ fun AutoLogoutHandler(timeoutMillis: Long = 2 * 60 * 1000L, onTimeout: () -> Uni
         }
     }
 
-    // Update on UI changes (recomposition)
     SideEffect {
         lastInteractionTime = System.currentTimeMillis()
     }
 }
-
 
 @Composable
 fun BottomNavigationBar(
@@ -152,9 +158,20 @@ fun BottomNavigationBar(
 }
 
 @Composable
-fun HomeScreen() {
+fun HomeScreen(viewModel: SearchViewModel = androidx.lifecycle.viewmodel.compose.viewModel()) {
     val background = AppBackgroundBrush()
+    val context = LocalContext.current
     var searchQuery by remember { mutableStateOf("") }
+    var suggestions by remember { mutableStateOf(listOf<String>()) }
+
+    // Fetch on text change
+    LaunchedEffect(searchQuery) {
+        if (searchQuery.length > 2) {
+            suggestions = viewModel.getSuggestions(searchQuery)
+        } else {
+            suggestions = emptyList()
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -172,8 +189,38 @@ fun HomeScreen() {
                 .fillMaxWidth()
                 .background(Color.White, shape = RoundedCornerShape(30.dp))
         )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        suggestions.forEach { suggestion ->
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp)
+                    .clickable {
+                        searchQuery = suggestion
+                        suggestions = emptyList()
+                    }
+            ) {
+                Text(
+                    text = suggestion,
+                    modifier = Modifier.padding(16.dp),
+                    fontSize = 14.sp
+                )
+            }
+        }
     }
 }
+
+
+suspend fun <T> com.google.android.gms.tasks.Task<T>.await(): T =
+    kotlinx.coroutines.suspendCancellableCoroutine { cont ->
+        addOnCompleteListener {
+            if (it.isSuccessful) cont.resume(it.result, null)
+            else cont.resumeWithException(it.exception ?: Exception("Unknown error"))
+        }
+    }
+
 
 
 
