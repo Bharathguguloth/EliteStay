@@ -83,4 +83,8 @@ dependencies {
 
     implementation(libs.okhttp)
 
+    implementation(libs.firebase.firestore.ktx)
+    implementation(libs.coil.compose) // For AsyncImage
+
+
 }

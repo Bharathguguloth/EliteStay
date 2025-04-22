@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.*
+import coil.compose.AsyncImage
 import com.example.elitestay.model.Property
 import com.example.elitestay.ui.theme.EliteStayTheme
 import com.google.android.libraries.places.api.Places
@@ -32,7 +33,9 @@ import com.google.android.libraries.places.api.model.Place
 import com.google.android.libraries.places.api.net.FetchPlaceRequest
 import com.google.android.libraries.places.api.net.FindAutocompletePredictionsRequest
 import com.google.android.libraries.places.api.net.PlacesClient
+import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.firestore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.tasks.await
@@ -172,17 +175,16 @@ fun HomeScreen() {
     var searchQuery by remember { mutableStateOf("") }
     var suggestions by remember { mutableStateOf(listOf<AutocompletePrediction>()) }
     var selectedPlaceDetails by remember { mutableStateOf<Pair<String, String>?>(null) }
+    var firestoreProperties by remember { mutableStateOf<List<Property>>(emptyList()) }
 
-    // Mock property list
-    val mockProperties = listOf(
-        Property("Cozy Apartment", "Mumbai", "₹18,000/mo", ""),
-        Property("Elite PG for Girls", "Pune", "₹12,500/mo", ""),
-        Property("Luxury Villa", "Goa", "₹35,000/mo", ""),
-        Property("Budget Stay", "Delhi", "₹8,500/mo", ""),
-        Property("University Hostel", "Bangalore", "₹15,000/mo", "")
-    )
+    // 🔹 Fetch properties from Firestore
+    LaunchedEffect(Unit) {
+        val db = Firebase.firestore
+        val snapshot = db.collection("properties").get().await()
+        firestoreProperties = snapshot.documents.mapNotNull { it.toObject(Property::class.java) }
+    }
 
-    // Autocomplete logic
+    // 🔹 Google Autocomplete
     LaunchedEffect(searchQuery) {
         if (searchQuery.length > 2) {
             val request = FindAutocompletePredictionsRequest.builder()
@@ -251,12 +253,12 @@ fun HomeScreen() {
             }
         }
 
-        // 🔹 Matched properties
-        selectedPlaceDetails?.let { (placeName, coordinates) ->
+        // 🔹 Matched Firestore properties
+        selectedPlaceDetails?.let { (placeName, _) ->
             Spacer(modifier = Modifier.height(16.dp))
 
-            val matchedProperties = mockProperties.filter {
-                placeName.contains(it.location, ignoreCase = true)
+            val matchedProperties = firestoreProperties.filter {
+                it.location.contains(placeName, ignoreCase = true)
             }
 
             Text(
@@ -280,9 +282,28 @@ fun HomeScreen() {
                             .padding(vertical = 6.dp)
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
+                            if (property.imageUrl.isNotEmpty()) {
+                                AsyncImage(
+                                    model = property.imageUrl,
+                                    contentDescription = property.name,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(180.dp)
+                                        .padding(bottom = 8.dp)
+                                )
+                            }
                             Text(property.name, fontWeight = FontWeight.SemiBold, fontSize = 18.sp)
                             Text(property.price, color = MaterialTheme.colorScheme.primary)
                             Text("Location: ${property.location}", style = MaterialTheme.typography.bodySmall)
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Button(
+                                onClick = {
+                                    // You can navigate to details or booking screen
+                                },
+                                modifier = Modifier.align(Alignment.End)
+                            ) {
+                                Text("Book Now")
+                            }
                         }
                     }
                 }
@@ -290,6 +311,7 @@ fun HomeScreen() {
         }
     }
 }
+
 
 
 
