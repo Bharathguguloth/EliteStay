@@ -60,13 +60,26 @@ fun PropertyDetailsScreen(propertyId: String, navController: NavController? = nu
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
                     Spacer(modifier = Modifier.weight(1f))
+                    val isShortlisted = remember { mutableStateOf(shortlistedProperties.contains(it)) }
+
+                        //val isShortlisted = remember { mutableStateOf(shortlistedProperties.contains(it)) }
+
                     IconButton(onClick = {
-                        if (!shortlistedProperties.contains(it)) {
+                        if (isShortlisted.value) {
+                            shortlistedProperties.remove(it)
+                        } else {
                             shortlistedProperties.add(it)
                         }
+                        isShortlisted.value = !isShortlisted.value
                     }) {
-                        Icon(Icons.Default.Favorite, contentDescription = "Shortlist", tint = Color.Red)
+                        Icon(
+                            imageVector = Icons.Default.Favorite,
+                            contentDescription = "Shortlist",
+                            tint = if (isShortlisted.value) Color.Red else Color.Gray
+                        )
                     }
+
+
                 }
 
                 if (it.imageUrl.isNotEmpty()) {

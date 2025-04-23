@@ -126,7 +126,8 @@ fun HomeActivityContent() {
                 )
             ) { backStackEntry ->
                 val propertyId = backStackEntry.arguments?.getString("propertyId") ?: ""
-                PropertyDetailsScreen(propertyId = propertyId)
+                PropertyDetailsScreen(propertyId = propertyId, navController = navController)
+
             }
 
 
