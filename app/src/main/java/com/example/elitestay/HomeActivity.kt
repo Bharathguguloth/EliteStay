@@ -1,5 +1,6 @@
 package com.example.elitestay
 
+import PropertyDetailsScreen
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -42,9 +43,10 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.resumeWithException
-import com.example.elitestay.PropertyDetailsScreen
+
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import shortlistedProperties
 
 
 class HomeActivity : ComponentActivity() {
@@ -347,11 +349,6 @@ suspend fun <T> com.google.android.gms.tasks.Task<T>.await(): T =
 @Composable
 fun ShortlistScreen() {
     val background = AppBackgroundBrush()
-    val properties = listOf(
-        "Elite Villa, Goa",
-        "Luxury Studio, Bangalore",
-        "Ocean View Apartment, Mumbai"
-    )
 
     Box(
         modifier = Modifier
@@ -362,25 +359,26 @@ fun ShortlistScreen() {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Shortlisted Properties", style = MaterialTheme.typography.headlineSmall, color = Color.White)
 
-            properties.forEach { property ->
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .padding(16.dp)
-                            .fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
+            if (shortlistedProperties.isEmpty()) {
+                Text("No properties shortlisted yet.", color = Color.LightGray)
+            } else {
+                shortlistedProperties.forEach { property ->
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                     ) {
-                        Text(property, fontSize = 16.sp)
-                        Text("View", color = MaterialTheme.colorScheme.primary)
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(property.name, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+                            Text("Location: ${property.location}")
+                            Text("Price: ${property.price}", color = MaterialTheme.colorScheme.primary)
+                        }
                     }
                 }
             }
         }
     }
 }
+
 
 @Composable
 fun ProfileScreen(
