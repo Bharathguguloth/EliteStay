@@ -52,7 +52,7 @@ class HomeActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         if (!Places.isInitialized()) {
-            Places.initialize(applicationContext, "AIzaSyAnqrHnw_ULXIDLRjWaEacqd1uGHw2a8JI")
+            Places.initialize(applicationContext, "AIzaSyBEUsccO5elkQd3fYEzICIN6VOQiInZLJU")
         }
 
         setContent {

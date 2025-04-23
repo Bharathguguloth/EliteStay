@@ -1,21 +1,34 @@
-package com.example.elitestay
-
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.elitestay.model.Property
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
 
+val shortlistedProperties = mutableStateListOf<Property>()
+
 @Composable
-fun PropertyDetailsScreen(propertyId: String) {
+fun PropertyDetailsScreen(propertyId: String, navController: NavController? = null) {
     var property by remember { mutableStateOf<Property?>(null) }
     var isLoading by remember { mutableStateOf(true) }
+    var showDialog by remember { mutableStateOf(false) }
+
+    // Handle back action
+    BackHandler(enabled = true) {
+        navController?.popBackStack()
+    }
 
     LaunchedEffect(propertyId) {
         try {
@@ -38,7 +51,24 @@ fun PropertyDetailsScreen(propertyId: String) {
         }
     } else {
         property?.let {
-            Column(modifier = Modifier.padding(16.dp)) {
+            Column(modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp)) {
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = { navController?.popBackStack() }) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
+                    Spacer(modifier = Modifier.weight(1f))
+                    IconButton(onClick = {
+                        if (!shortlistedProperties.contains(it)) {
+                            shortlistedProperties.add(it)
+                        }
+                    }) {
+                        Icon(Icons.Default.Favorite, contentDescription = "Shortlist", tint = Color.Red)
+                    }
+                }
+
                 if (it.imageUrl.isNotEmpty()) {
                     AsyncImage(
                         model = it.imageUrl,
@@ -55,10 +85,28 @@ fun PropertyDetailsScreen(propertyId: String) {
                 Text("Price: ${it.price}", style = MaterialTheme.typography.bodyLarge)
                 Text("Location: ${it.location}", style = MaterialTheme.typography.bodyMedium)
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(24.dp))
 
-                Button(onClick = { /* Booking logic here */ }) {
+                Button(
+                    onClick = { showDialog = true },
+                    modifier = Modifier.align(Alignment.End)
+                ) {
                     Text("Book Now")
+                }
+
+                if (showDialog) {
+                    AlertDialog(
+                        onDismissRequest = { showDialog = false },
+                        confirmButton = {
+                            TextButton(onClick = { showDialog = false }) {
+                                Text("OK")
+                            }
+                        },
+                        title = { Text("Booking Confirmed") },
+                        text = {
+                            Text("Your booking has been confirmed!\nPlease pay after visiting.")
+                        }
+                    )
                 }
             }
         } ?: run {

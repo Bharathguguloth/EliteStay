@@ -12,7 +12,7 @@ import org.json.JSONObject
 class SearchViewModel : ViewModel() {
 
     private val client = OkHttpClient()
-    private val apiKey = "AIzaSyAnqrHnw_ULXIDLRjWaEacqd1uGHw2a8JI" // 🔑 Replace with your actual key
+    private val apiKey = "AIzaSyBEUsccO5elkQd3fYEzICIN6VOQiInZLJU"
 
     suspend fun getSuggestions(query: String): List<String> {
         return withContext(Dispatchers.IO) {
