@@ -1,10 +1,17 @@
 package com.example.elitestay
 
 import PropertyDetailsScreen
+import android.Manifest
+import android.annotation.SuppressLint
+import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.location.Geocoder
+import android.location.Location
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.annotation.RequiresPermission
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -22,12 +29,20 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
+import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.*
 import androidx.navigation.navArgument
 import coil.compose.AsyncImage
 import com.example.elitestay.model.Property
 import com.example.elitestay.ui.theme.EliteStayTheme
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.isGranted
+
+import com.google.accompanist.permissions.rememberPermissionState
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationServices
 import com.google.android.libraries.places.api.Places
 import com.google.android.libraries.places.api.model.AutocompletePrediction
 
@@ -47,6 +62,8 @@ import kotlin.coroutines.resumeWithException
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import shortlistedProperties
+import java.util.Locale
+
 
 
 class HomeActivity : ComponentActivity() {
@@ -108,7 +125,10 @@ fun HomeActivityContent() {
             modifier = Modifier.padding(innerPadding)
         ) {
             composable(BottomNavItem.Home.route) { HomeScreen(navController) }
-            composable(BottomNavItem.Shortlist.route) { ShortlistScreen() }
+            composable("shortlist") {
+                ShortlistScreen(navController)
+            }
+
             composable(BottomNavItem.Profile.route) {
                 ProfileScreen(
                     onLogout = {
@@ -347,9 +367,20 @@ suspend fun <T> com.google.android.gms.tasks.Task<T>.await(): T =
 
 
 
+// Add this at the top (global)
+val shortlistedProperties = mutableStateListOf<Property>()
+val bookedProperties = mutableStateListOf<Property>()  // New booking history list
+
 @Composable
-fun ShortlistScreen() {
+fun ShortlistScreen(navController: NavController? = null) {
     val background = AppBackgroundBrush()
+    var bookings by remember { mutableStateOf<List<Property>>(emptyList()) }
+
+    LaunchedEffect(Unit) {
+        val db = FirebaseFirestore.getInstance()
+        val snapshot = db.collection("bookings").get().await()
+        bookings = snapshot.documents.mapNotNull { it.toObject(Property::class.java) }
+    }
 
     Box(
         modifier = Modifier
@@ -357,8 +388,21 @@ fun ShortlistScreen() {
             .background(background)
             .padding(24.dp)
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("Shortlisted Properties", style = MaterialTheme.typography.headlineSmall, color = Color.White)
+        Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
+            // Back Button Row
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = { navController?.popBackStack() }) {
+                    Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
+                }
+                Text(
+                    "Shortlist",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = Color.White
+                )
+            }
+
+            // Shortlist Section
+            Text("Shortlisted Properties", style = MaterialTheme.typography.titleMedium, color = Color.White)
 
             if (shortlistedProperties.isEmpty()) {
                 Text("No properties shortlisted yet.", color = Color.LightGray)
@@ -376,20 +420,51 @@ fun ShortlistScreen() {
                     }
                 }
             }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Booking History Section
+            Text("Booking History", style = MaterialTheme.typography.titleMedium, color = Color.White)
+
+            if (bookings.isEmpty()) {
+                Text("No bookings yet.", color = Color.LightGray)
+            } else {
+                bookings.forEach { property ->
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(property.name, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+                            Text("Location: ${property.location}")
+                            Text("Price: ${property.price}", color = MaterialTheme.colorScheme.primary)
+                        }
+                    }
+                }
+            }
         }
     }
 }
 
 
+
+
+
+
+@OptIn(ExperimentalPermissionsApi::class)
 @Composable
-fun ProfileScreen(
-    fullName: String = "Bharat",
-    email: String = "bharat12@gmail.com",
-    onLogout: () -> Unit
-) {
+fun ProfileScreen(onLogout: () -> Unit) {
+    val context = LocalContext.current
     val background = AppBackgroundBrush()
-    var notificationsEnabled by remember { mutableStateOf(true) }
-    var darkModeEnabled by remember { mutableStateOf(false) }
+    val user = FirebaseAuth.getInstance().currentUser
+    val email = user?.email ?: "No email available"
+
+    val fusedLocationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
+    var locationText by remember { mutableStateOf("Tap to get your coordinates") }
+
+    val locationPermissionState = rememberPermissionState(android.Manifest.permission.ACCESS_FINE_LOCATION)
+
+
 
     Box(
         modifier = Modifier
@@ -403,25 +478,41 @@ fun ProfileScreen(
         ) {
             Text("My Profile", style = MaterialTheme.typography.headlineSmall, color = Color.White)
 
-            // Profile Info
-            ProfileItem("Full Name", fullName)
             ProfileItem("Email", email)
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Settings Section
-            Text("Settings", style = MaterialTheme.typography.titleMedium, color = Color.White)
+            Text("Current Location", style = MaterialTheme.typography.titleMedium, color = Color.White)
 
-            SettingsToggleItem("Notifications", notificationsEnabled) {
-                notificationsEnabled = it
-            }
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        if (locationPermissionState.status.isGranted) {
+                            getUserCoordinates(fusedLocationClient, context) { coords ->
+                                locationText = coords
+                            }
+                        } else {
+                            locationPermissionState.launchPermissionRequest()
+                        }
 
-            SettingsToggleItem("Dark Mode", darkModeEnabled) {
-                darkModeEnabled = it
-            }
-
-            SettingsClickableItem("Language", value = "English") {
-                // TODO: Add language selection logic
+                    },
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.LocationOn, contentDescription = "Location")
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Tap to Locate", fontSize = 16.sp)
+                    }
+                    Text(locationText, fontSize = 14.sp, color = MaterialTheme.colorScheme.primary)
+                }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -435,6 +526,10 @@ fun ProfileScreen(
         }
     }
 }
+
+
+
+
 
 
 @Composable
@@ -455,43 +550,42 @@ fun ProfileItem(label: String, value: String) {
     }
 }
 
-@Composable
-fun SettingsToggleItem(label: String, checked: Boolean, onToggle: (Boolean) -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .padding(horizontal = 16.dp, vertical = 12.dp)
-                .fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(label, fontSize = 16.sp)
-            Switch(checked = checked, onCheckedChange = onToggle)
-        }
+fun getUserCoordinates(
+    fusedLocationClient: FusedLocationProviderClient,
+    context: Context,
+    onResult: (String) -> Unit
+) {
+    val permission = Manifest.permission.ACCESS_FINE_LOCATION
+    val isGranted = ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
+
+    if (!isGranted) {
+        onResult("Location permission not granted")
+        return
+    }
+
+    try {
+        fusedLocationClient.lastLocation
+            .addOnSuccessListener { location ->
+                if (location != null) {
+                    val lat = "%.5f".format(location.latitude)
+                    val lon = "%.5f".format(location.longitude)
+                    onResult("Lat: $lat, Lon: $lon")
+                } else {
+                    onResult("Location not available")
+                }
+            }
+            .addOnFailureListener {
+                onResult("Error getting location")
+            }
+    } catch (e: SecurityException) {
+        onResult("Permission denied")
     }
 }
 
-@Composable
-fun SettingsClickableItem(label: String, value: String, onClick: () -> Unit) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() },
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .padding(horizontal = 16.dp, vertical = 12.dp)
-                .fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(label, fontSize = 16.sp)
-            Text(value, fontSize = 16.sp, color = MaterialTheme.colorScheme.primary)
-        }
-    }
-}
+
+
+
+
+
+
 

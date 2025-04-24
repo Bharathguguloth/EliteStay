@@ -23,7 +23,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 //AIzaSyD7_HwveZyfjoJPyNRRJ9JGuoFUsCSawQc
-        //Certificate fingerprint: SHA1: DA:39:A3:EE:5E:6B:4B:0D:32:55:BF:EF:95:60:18:90:AF:D8:07:09
+
         setContent {
             EliteStayTheme {
                 var showSplash by remember { mutableStateOf(true) }

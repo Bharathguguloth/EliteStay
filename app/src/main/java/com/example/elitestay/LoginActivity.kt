@@ -56,7 +56,7 @@ fun LoginScreen(auth: FirebaseAuth) {
     var loading by remember { mutableStateOf(false) }
     var showGDPR by remember { mutableStateOf(true) }
 
-    // 🔐 GDPR Consent Dialog
+    // GDPR Consent Dialog
     if (showGDPR) {
         AlertDialog(
             onDismissRequest = {},
@@ -83,7 +83,7 @@ fun LoginScreen(auth: FirebaseAuth) {
         )
     }
 
-    // ⬇️ Login UI
+    // ⬇Login UI
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -184,14 +184,7 @@ fun LoginScreen(auth: FirebaseAuth) {
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                Text(
-                    text = "Forgot Password?",
-                    modifier = Modifier
-                        .align(Alignment.End)
-                        .clickable { /* TODO: Handle forgot password */ },
-                    color = MaterialTheme.colorScheme.secondary,
-                    fontSize = 14.sp
-                )
+
 
                 Spacer(modifier = Modifier.height(16.dp))
 

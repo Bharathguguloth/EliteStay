@@ -86,5 +86,9 @@ dependencies {
     implementation(libs.firebase.firestore.ktx)
     implementation(libs.coil.compose) // For AsyncImage
 
+    implementation (libs.accompanist.permissions)
+    implementation (libs.accompanist.permissions.v0314beta)
+
+
 
 }

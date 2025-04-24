@@ -1,4 +1,6 @@
 [versions]
+accompanistPermissions = "0.31.5-beta"
+accompanistPermissionsVersion = "0.31.4-beta"
 agp = "8.9.1"
 coilCompose = "2.4.0"
 kotlin = "2.0.21"
@@ -21,6 +23,8 @@ playServicesPlaces = "17.1.0"
 
 [libraries]
 # Core & Compose
+accompanist-permissions = { module = "com.google.accompanist:accompanist-permissions", version.ref = "accompanistPermissions" }
+accompanist-permissions-v0314beta = { module = "com.google.accompanist:accompanist-permissions", version.ref = "accompanistPermissionsVersion" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }

@@ -17,7 +17,9 @@ import com.example.elitestay.model.Property
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
 
+
 val shortlistedProperties = mutableStateListOf<Property>()
+val bookedProperties = mutableStateListOf<Property>()
 
 @Composable
 fun PropertyDetailsScreen(propertyId: String, navController: NavController? = null) {
@@ -101,26 +103,46 @@ fun PropertyDetailsScreen(propertyId: String, navController: NavController? = nu
                 Spacer(modifier = Modifier.height(24.dp))
 
                 Button(
-                    onClick = { showDialog = true },
+                    onClick = {
+                        showDialog = true
+                        if (!bookedProperties.contains(it)) {
+                            bookedProperties.add(it)
+                        }
+                    },
                     modifier = Modifier.align(Alignment.End)
                 ) {
                     Text("Book Now")
                 }
 
+
                 if (showDialog) {
                     AlertDialog(
                         onDismissRequest = { showDialog = false },
                         confirmButton = {
-                            TextButton(onClick = { showDialog = false }) {
+                            TextButton(onClick = {
+                                showDialog = false
+
+                                property?.let {
+                                    val db = FirebaseFirestore.getInstance()
+                                    db.collection("bookings")
+                                        .document(it.name) // or use a UUID if you want multiple bookings for same property
+                                        .set(it)
+                                }
+
+                                navController?.navigate("shortlist")
+                            }) {
                                 Text("OK")
                             }
+
                         },
                         title = { Text("Booking Confirmed") },
                         text = {
                             Text("Your booking has been confirmed!\nPlease pay after visiting.")
                         }
                     )
+
                 }
+
             }
         } ?: run {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
